@@ -15,7 +15,7 @@ var sys = require('sys')
   , fs = require('fs')
   , http = require('http')
   , httpProxy = require('http-proxy')
-  , Step = require('Step')
+  , Step = require('step')
 
 // Common functions
 
