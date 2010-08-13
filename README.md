@@ -23,7 +23,7 @@ The main command is:
 
 This initializes your server application and starts it.
 After this, you only need to pass the <hostname> as an argument for the other commands in order to access your server.
-Other commands include, `start`, `stop`, `restart`, `watch`, `unwatch`, `destroy`.
+Other commands include: `start`, `stop`, `restart`, `watch`, `unwatch`, `destroy`.
 
 ## Description
 
@@ -37,5 +37,5 @@ run your app again, but doesn't kill the old process until the new one is consid
 crash for a short period). If the changed app crashes and is unable to start, polla rolls back to the last known
 stable instance of your app so your sites don't go down.
 
-polla passes two enviroment variables accessed with process.env.POLLA_PORT and process.env.POLLA_HOST inside
-your app, so you should change your http server to listen() to those.
+polla passes two enviroment variables accessed with `process.env.POLLA_PORT` and `process.env.POLLA_HOST` inside
+your app, so you should change your http server to `.listen()` to those.
