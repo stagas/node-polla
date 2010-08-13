@@ -39,3 +39,18 @@ stable instance of your app so your sites don't go down.
 
 polla passes two enviroment variables accessed with `process.env.POLLA_PORT` and `process.env.POLLA_HOST` inside
 your app, so you should change your http server to `.listen()` to those.
+
+Also, since node spawns a new http connection to your server, req.connection.remoteAddress will point to your
+server's IP address. Until this is resolved somehow, polla creates a req.headers.ip variable holding the remoteAddress,
+so you should use that to get the client's IP.
+
+## Issues
+
+The filename you pass to polla is relative to where you launched polla_master, not where polla runs.
+For that, I suggest you run polla_master and polla in the same folder so you don't have to type in
+absolute paths.
+
+Also, polla might fail if you upload multiple js files at the same time through FTP (if that process
+would take longer than 10 seconds). If you're unsure, do `unwatch` on your server and `restart` by hand.
+
+Command `destroy` isn't implemented yet.

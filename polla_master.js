@@ -18,7 +18,6 @@ var sys = require('sys')
   , Step = require('step')
 
 // Common functions
-
 function log(msg) {
   sys.log(msg)
 }
@@ -37,6 +36,8 @@ log([ '', ''
     , 'Master is running and waiting for commands.'
     , ''
     ].join('\n'))
+
+var PORT = process.argv[2] ? process.argv[2] : '127.0.0.1'
     
 // Listening commands server
 var conserver = net.createServer(function(stream) {
@@ -208,9 +209,15 @@ function watchFolder(hostname) {
     files.forEach(function(file) {
       servers[hostname].files.push(file)
       fs.watchFile(file, {interval : 500}, function(curr, prev) {
-        if (curr.mtime.valueOf() != prev.mtime.valueOf() || curr.ctime.valueOf() != prev.ctime.valueOf()) {
+        if (servers[hostname].watched && (curr.mtime.valueOf() != prev.mtime.valueOf() || curr.ctime.valueOf() != prev.ctime.valueOf())) {
           log('RESTARTING '+ hostname +' because of changed file at ' + file)
-          restartServer(hostname)
+          unwatchFolder(hostname)
+          setTimeout(function() {
+            watchFolder(hostname)
+          }, 10000)
+          setTimeout(function() {
+            restartServer(hostname)
+          }, 5000)
         }
       })
     })
@@ -274,8 +281,6 @@ function startServer(hostname) {
     }
     proc = null    
   })
-  
-  return s.process
 }
 
 function restartServer(hostname) {
@@ -291,6 +296,7 @@ function getPort(hostname) {
 // Set up the proxy server
 httpProxy.createServer(function(req, res, proxy) {
   var hostname = req.headers.host
+  req.headers.ip = req.connection.remoteAddress
   if (typeof servers[hostname] !== 'undefined') {
     // Proxy the connection to the appropriate server
     var port = getPort(hostname)
@@ -299,7 +305,7 @@ httpProxy.createServer(function(req, res, proxy) {
     // Fallback
     proxy.proxyRequest(8888, hostname, req, res)
   }
-}).listen(80)
+}).listen(80, PORT)
 
 // Fallback server (handles unmatched servers)
 var fallbackServer = http.createServer(function(req, res) {
@@ -307,27 +313,27 @@ var fallbackServer = http.createServer(function(req, res) {
   res.end('<h1>Not Found</h1><p>The URL you requested could not be found</p>')
 }).listen(8888)
 
-function revertIfErr(hostname, oldProcess, oldPort, newProcess, newPort) {
+function revertIfErr(hostname, oldProcess, oldPort) {
   setTimeout(function() {
     var s = servers[hostname]
-      , hasErr = s.error[newPort]
+      , hasErr = s.error[s.port]
 
     if (!s.processPool[oldProcess]) {
       log('Previous process '+s.app+' at '+hostname+':'+s.portPool[oldPort]+' didn\'t initialize, no action was performed')
     } else if (!hasErr) {
       if (s.processPool[oldProcess]) s.processPool[oldProcess].kill()
-      log('Process '+s.app+' at '+hostname+':'+s.portPool[newPort]+' looks STABLE, killing previous instance')
+      log('Process '+s.app+' at '+hostname+':'+s.portPool[s.port]+' looks STABLE, killing previous instance')
     } else {
-      s.process = oldProcess
-      s.port = oldPort
-      s.error[s.port] = null
       log([ '************ALERT**************'
-          , '*** YOUR SERVER '+ s.app +' AT '+ hostname +':'+ s.portPool[newPort] +' IS EXPERIENCING PROBLEMS ***'
+          , '*** YOUR SERVER '+ s.app +' AT '+ hostname +':'+ s.portPool[s.port] +' IS EXPERIENCING PROBLEMS ***'
           , 'Rolling back to the LAST STABLE instance at port '+ s.portPool[oldPort]
           , 'The unstable instance was KILLED'
           ].join('\n'))
+      s.process = oldProcess
+      s.port = oldPort
+      s.error[s.port] = null
     }
-  }, 5000)
+  }, 15000)
 }
 
 setInterval(function() {
@@ -348,8 +354,8 @@ setInterval(function() {
         , oldPort = parseInt(s.portStable)
       
       s.port = s.portPool.push(newPort()) - 1
-      var newProcess = startServer(hostname)
-      revertIfErr(hostname, oldProcess, oldPort, newProcess, parseInt(s.port))
+      startServer(hostname)
+      revertIfErr(hostname, oldProcess, oldPort)
       
     } else {
       log('*** '+ s.app +' at '+ hostname +':'+ s.portPool[s.port] +' has ERRORS! Could not start')
