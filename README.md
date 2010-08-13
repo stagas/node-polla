@@ -22,7 +22,7 @@ The main command is:
 	$ polla init <folder/app.js> <hostname>
 
 This initializes your server application and starts it.
-After this, you only need to pass the <hostname> as an argument for the other commands in order to access your server.
+After this, you only need to pass the `<hostname>` as an argument for the other commands in order to access your server.
 Other commands include: `start`, `stop`, `restart`, `watch`, `unwatch`, `destroy`.
 
 ## Description
