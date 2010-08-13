@@ -30,14 +30,15 @@ function logs(msg) {
 var spawn = child_process.spawn
   , exec = child_process.exec
 
+var PORT = process.argv[2] ? process.argv[2] : '127.0.0.1'
+
 log([ '', ''
     , 'polla_master by stagas'
     , '----------------------'
-    , 'Master is running and waiting for commands.'
+    , 'Master is running at: '+ PORT
+    , 'If you want to listen to another port, type:  polla_master <port>'
     , ''
     ].join('\n'))
-
-var PORT = process.argv[2] ? process.argv[2] : '127.0.0.1'
     
 // Listening commands server
 var conserver = net.createServer(function(stream) {
@@ -50,30 +51,34 @@ var conserver = net.createServer(function(stream) {
     switch (args.cmd) {
     
       case 'init':
-        Step(
-          function() {
-            this.fpath = args.target
-            this.dpath = path.dirname(this.fpath)
+        if (typeof args.hostname !== 'undefined') {
+          Step(
+            function() {
+              this.fpath = args.target
+              this.dpath = path.dirname(this.fpath)
 
-            fs.stat(this.fpath, this.parallel() )
-            fs.stat(this.dpath, this.parallel() )
-          }
-          
-        , function(err, fstat, dstat) {
-            if ( !err && fstat.isFile() && dstat.isDirectory() ) {
-              if (typeof servers[args.hostname] === 'undefined') {
-                stream.write('Starting ' + args.target + ' at ' + args.hostname)
-                queueToStart.push( { app: this.fpath, folder: this.dpath, hostname: args.hostname } )
-              } else {
-                stream.write(args.hostname + ' is USED by ' + servers[args.hostname].app + '. Server did NOT start')
-              }
-            } else {
-              stream.write(this.fpath + ' was not found. Server did NOT start')
+              fs.stat(this.fpath, this.parallel() )
+              fs.stat(this.dpath, this.parallel() )
             }
-            stream.end()
-          }
-        
-        )
+            
+          , function(err, fstat, dstat) {
+              if ( !err && fstat.isFile() && dstat.isDirectory() ) {
+                if (typeof servers[args.hostname] === 'undefined') {
+                  stream.write('Starting ' + args.target + ' at ' + args.hostname)
+                  queueToStart.push( { app: this.fpath, folder: this.dpath, hostname: args.hostname } )
+                } else {
+                  stream.write(args.hostname + ' is USED by ' + servers[args.hostname].app + '. Server did NOT start')
+                }
+              } else {
+                stream.write(this.fpath + ' was not found. Server did NOT start')
+              }
+              stream.end()
+            }
+          
+          )
+        } else {
+          stream.end('You need to type in a hostname after your app')
+        }
         break
       
       case 'start':

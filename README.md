@@ -10,7 +10,7 @@ polla is a multiple http server proxy/router with hot code reloading and failure
 
 Start the master with:
 
-	$ polla_master
+	$ polla_master [port]
 
 On a new shell type:
 
@@ -19,7 +19,7 @@ On a new shell type:
 And you'll be presented with a list of commands on what you can do with polla.
 The main command is:
 
-	$ polla init <folder/app.js> <hostname>
+	$ polla init <path/to/app.js> <hostname>
 
 This initializes your server application and starts it.
 After this, you only need to pass the `<hostname>` as an argument for the other commands in order to access your server.
