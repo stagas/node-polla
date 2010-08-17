@@ -1,6 +1,6 @@
 { "name" : "polla"
 , "description" : "polla is a multiple http server proxy/router with hot code reloading and failure rollback"
-, "version" : "0.0.3"
+, "version" : "0.1.0"
 , "homepage" : "http://github.com/stagas/node-polla"
 , "author" : "George Stagakis <gstagas@gmail.com> (http://stagas.com/)"
 , "repository" :
@@ -17,6 +17,6 @@
   ]
 , "dependencies" :
   { "http-proxy" : ">=0.1.5"
-  , "step" : ">=0.0.3"
+  , "asciimo" : ">=0.2.5"
   }
 }

@@ -9,6 +9,8 @@
 
 var sys = require('sys')
   , net = require('net')
+  , asciimo = require('asciimo').Figlet
+  , colors = require('colors')
  
 function log(msg) {
   sys.log(msg)
@@ -18,14 +20,15 @@ function logs(msg) {
   sys.log(sys.inspect(msg))
 }
 
-function connectSend(cmd, target, hostname) {
+function connectSend(args) {
   var stream = net.createConnection('/tmp/polla_master.sock')
   stream.on('connect', function() {
-    sys.log('Sending ' + cmd + ' to ' + target)
-    stream.write(JSON.stringify({cmd: cmd, target: target, hostname: hostname}))
+    stream.write(args)
   })
   stream.on('data', function(data) {
-    sys.log('POLLA: '+data)
+    data.toString().split('\t\n').forEach(function(e,i,a) {
+      if (i<a.length-1) sys.log('polla - '+e)
+    })
   })
   stream.on('error', function(err) {
     sys.puts("Problem connecting. Are you sure polla_master is running?")
@@ -38,39 +41,64 @@ function connectSend(cmd, target, hostname) {
   })
 }
 
-function help() {
-  sys.puts([ ''
-    , 'polla by stagas'
-    , '---------------'
-    , 'Usage:'
-    , ''
-    , 'Initializing and starting a server:'
-    , ''
-    , '   polla init <folder/app.js> <hostname>'
-    , ''
-    , 'The following commands are available after initialization:'
-    , ''
-    , '   Starting a server: ........ polla start <hostname>'
-    , '   Stopping a server: ........ polla stop <hostname>'
-    , '   Restarting a server: ...... polla restart <hostname>'
-    , '   Enable folder watching: ... polla watch <hostname>'
-    , '   Disable folder watching: .. polla unwatch <hostname>'
-    , '   Destroy a server: ......... polla destroy <hostname>'
-    , ''
-    , 'IMPORTANT NOTES: Your app should be in its own folder for code reloading to work '
-      + 'properly.'
-    , 'Also, process.env.POLLA_PORT and process.env.POLLA_HOSTNAME are the two '
-      + 'enviroment variables passed to your app\'s instance, so your http server should be '
-      + 'listening to them for polla to be able to route the traffic.'
-    ].join('\n'))
+function help(callback) {
+  //
+  asciimo.write('polla', 'eftiwater', function(art) {
+    var col = [
+          'yellow', 'cyan', 'magenta', 'green', 'red', 'blue' ]
+      , cnt = 0
+      , artcol = []
+      , rnd = 0
+      
+    art.toString().split('\n').forEach(function(e) {
+      rnd = Math.floor((Math.random() * col.length))
+      eval(
+        'artcol.push(e.' + col[rnd] + '); ' 
+      )
+      rnd = Math.floor((Math.random() * col.length))      
+    })
+    artcol.pop()
+    
+    sys.puts(
+      [ artcol.join('\n')
+      , eval('\'==================\'.' + col[rnd])
+      , 'Usage:'
+      , '   polla <hostname> [--]<command> [parameters] [<command>, ...]'
+      , ''
+      , 'Commands:'
+      , ''
+      , '   Initialize a server: ...... init <folder/app.js>'
+      , '   Starting a server: ........ start'
+      , '   Stopping a server: ........ stop'
+      , '   Restarting a server: ...... restart'
+      , '   Enable folder watching: ... watch'
+      , '   Disable folder watching: .. unwatch'
+      , '   Server status: ............ status|stat'
+      , '   Destroy a server: ......... destroy|kill'
+      , '   Killing polla_master: ..... exit|die'
+      , ''
+      , 'IMPORTANT NOTES: Your app should be in its own folder for code reloading to work '
+        + 'properly.'
+      , 'Also, process.env.POLLA_PORT and process.env.POLLA_HOSTNAME are the two '
+        + 'enviroment variables passed to your app\'s instance, so your http server should be '
+        + 'listening to them for polla to be able to route the traffic.'
+      , '-----------------------------------------------------------'
+      ].join('\n')
+    )
+    
+    if (callback) callback()
+    
+  })
 }
 
-var cmd = process.argv[2]
-if (['init','start','stop','restart','watch','unwatch','destroy'].indexOf(cmd) >= 0) {
-  var target = process.argv[3]
-  var hostname = process.argv[4]
+//var cmd = process.argv[3].toLowerCase()
 
-  connectSend(cmd.toLowerCase(), target, hostname)
-} else {
-  help()
-}
+//if (['init','start','stop','restart','watch','unwatch','destroy'].indexOf(cmd) >= 0) {
+//  var hostname = process.argv[2]
+//    , app = process.argv[4]
+
+help()
+  
+connectSend(process.argv.slice(2).join(' '))
+
+

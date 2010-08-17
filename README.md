@@ -1,6 +1,6 @@
 # polla
 
-polla is a multiple http server proxy/router with hot code reloading and failure rollback.
+polla is a multiple http server proxy/router with hot code reloading and failure rollback (hopefully).
 
 ## Installation
 
@@ -8,24 +8,14 @@ polla is a multiple http server proxy/router with hot code reloading and failure
 
 ## Usage
 
-Start the master with:
+Help:
 
-	$ polla_master [port]
-
-On a new shell type:
-
-	$ polla
-
-And you'll be presented with a list of commands on what you can do with polla.
-The main command is:
-
-	$ polla init <path/to/app.js> <hostname>
-
-This initializes your server application and starts it.
-After this, you only need to pass the `<hostname>` as an argument for the other commands in order to access your server.
-Other commands include: `start`, `stop`, `restart`, `watch`, `unwatch`, `destroy`.
+	$ polla_master -h
+	$ polla -h
 
 ## Description
+
+This is a hack, far from stable. Not suggested for real enviroments.
 
 polla was inspired by [this](http://dracoblue.net/dev/hot-reload-for-nodejs-servers-on-code-change/173/) article but takes
 it a lot further than simple hot code reloading:
@@ -52,5 +42,3 @@ absolute paths.
 
 Also, polla might fail if you upload multiple js files at the same time through FTP (if that process
 would take longer than 10 seconds). If you're unsure, do `unwatch` on your server and `restart` by hand.
-
-Command `destroy` isn't implemented yet.
