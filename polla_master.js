@@ -20,6 +20,12 @@ var sys = require('sys')
 
 var logo = null
 
+process.on('uncaughtException', function (err) {
+  var s = err.stack.split('\n')
+  s.shift()
+  console.log(s)
+})
+
 // Common functions
 function findAllJsFiles(path, callback) {
   fs.stat(path, function(err, fstat){
@@ -92,17 +98,19 @@ var config = {
   }
 }
 
-var configJSON = fs.readFileSync(configFile, 'utf8')
+var configJSON = null
 
 try {
-  config = JSON.parse(configJSON)
-} catch(err) {
+  configJSON = fs.readFileSync(configFile, 'utf8')
+  config = JSON.parse(configJSON)  
+} catch(e) {
+  log(e)
   log('Unable to read config, using defaults or command line options')
 }
 
-config.ip = config.defaults.ip ? config.defaults.ip : defaults.ip
-config.listen = config.defaults.listen ? config.defaults.listen : defaults.listen
-config.ports = config.defaults.ports ? config.defaults.ports : defaults.ports
+config.ip = config.defaults.ip || defaults.ip
+config.listen = config.defaults.listen || defaults.listen
+config.ports = config.defaults.ports || defaults.ports
 
 // Command line options overrides
 var arg, args = process.argv.slice(2)
@@ -168,7 +176,7 @@ var ServerProcess = function(server) {
   this.hostname = server.hostname
   this.app = server.app
   this.port = parseInt(server.port)
-  this.process = {}
+  this.process = null
   this.error = null
   this.stable = false
   this.exited = false
@@ -181,7 +189,16 @@ ServerProcess.prototype = {
     process.env.POLLA_HOST = this.hostname
     process.env.POLLA_PORT = this.port
     
-    this.process = child_process.spawn('node', [this.app])
+    try {
+      this.process = child_process.spawn('node', [this.app])
+    } catch(e) {
+      log(e)
+      if (!self.error) self.error = true
+      self.server.retries = 0
+      self.server.started = false
+      self.server.trySpawn()
+      return
+    }
     
     this.process.stdout.on('data', function (data) {
       process.stdout.write(data)
@@ -211,9 +228,21 @@ ServerProcess.prototype = {
   }
 
 , kill: function(cb) {
+    var self = this
     if (this.process) {
       log.say(this, 'Sending KILL signal to process')
-      if (this.process) process.kill(this.process.pid)
+      if (this.process) {
+        try {
+          this.process.removeAllListeners('exit') //, function() {
+          this.process.removeAllListeners('close')
+          this.process.removeAllListeners('error')
+          child_process.exec('kill '+ self.process.pid)
+          //})
+        } catch(e) {
+          log(e)
+          return cb(true)
+        }
+      }
       if (cb) cb(false)
     } else {
       log.notice(this, 'Process does not exist. Cannot KILL')
@@ -247,11 +276,7 @@ Server.prototype = {
 
     log.say(this, 'Starting server...')
 
-//    if (!this.process || !this.process.stable || this.process.error || this.changed ) {
     this.trySpawn()
-//    } else {
-//      this.process.spawn()
-//    }
     
     if (!this.unwatched && !this.watched) this.watch()
   }
@@ -347,11 +372,15 @@ Server.prototype = {
     var proc
       , procPool = this.processPool.slice(0)
     
-    log.say(this, 'Killing old processes')
+    log.say(this, 'Killing old processes (if any)')
     
     while (proc = procPool.pop()) {
       if (!proc.exited && !proc.error && proc !== this.process) {
-        proc.kill()
+        try {
+          proc.kill()
+        } catch(e) {
+          log(e)
+        }
       }
     }
   }
@@ -362,7 +391,11 @@ Server.prototype = {
       
     while (proc = procPool.pop()) {
       if (!proc.exited && !proc.error) {
-        proc.kill()
+        try {
+          proc.kill()
+        } catch(e) {
+          log(e)
+        }
       }
     }
     
@@ -464,8 +497,7 @@ var polla = {
   }
   
 , server: function(hostname, cmd) {
-    return typeof this.servers[hostname] !== 'undefined' ? 
-      this.servers[hostname][cmd]() : log.errorNW('Server not found')
+    return typeof this.servers[hostname] !== 'undefined' ? this.servers[hostname][cmd]() : log.errorNW('Server not found')
   }
   
 , startProxy: function() {
@@ -479,14 +511,18 @@ var polla = {
       req.headers.ip = req.connection.remoteAddress
       
       if (typeof self.servers[hostname] !== 'undefined') {
-
-        proxy.proxyRequest(self.servers[hostname].port, hostname, req, res)
-        
+        try {
+          proxy.proxyRequest(self.servers[hostname].port, hostname, req, res)
+        } catch(e) {
+          log(e)
+        }
       } else {
-      
         // Fallback
-        proxy.proxyRequest(8888, hostname, req, res)
-        
+        try {
+          proxy.proxyRequest(8888, hostname, req, res)
+        } catch(e) {
+          log(e)
+        }
       }
     }).listen(config.listen, config.ip)
     
@@ -495,7 +531,7 @@ var polla = {
       res.writeHead(404, { 'Content-Type': 'text/html' })
       res.end('<h1>Not Found</h1><p>The URL you requested could not be found</p>')
     }).listen(8888)
-    
+
   }
   
 , startConsole: function() {
@@ -584,4 +620,31 @@ var polla = {
   }
 }
 
+// soft kill
+
 polla.init()
+
+function bye() {
+  console.log('Killing me softly')
+  for (var k in polla.servers) {
+    polla.servers[k].killAll()
+  }
+  setTimeout(function() {
+    process.exit()
+  }, 3000)
+}
+
+process.on('SIGINT', bye)
+process.on('SIGTERM', bye)
+
+if (typeof config.servers !== 'undefined' && config.servers.length) {
+  var cserver
+  for (var i=0; i<config.servers.length; i++) {
+    cserver = config.servers[i]
+    polla.servers[cserver.host] = new Server(cserver.host, cserver.app)
+    for (var a=0; a < cserver.actions.length; a++) {
+      console.log(cserver.host, cserver.actions[a])
+      polla.server(cserver.host, cserver.actions[a])
+    }
+  }
+}

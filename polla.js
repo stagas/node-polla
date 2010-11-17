@@ -61,28 +61,8 @@ function help(callback) {
     
     sys.puts(
       [ artcol.join('\n')
-      , eval('\'==================\'.' + col[rnd])
-      , 'Usage:'
-      , '   polla <hostname> [--]<command> [parameters] [<command>, ...]'
-      , ''
-      , 'Commands:'
-      , ''
-      , '   Initialize a server: ...... init <folder/app.js>'
-      , '   Starting a server: ........ start'
-      , '   Stopping a server: ........ stop'
-      , '   Restarting a server: ...... restart'
-      , '   Enable folder watching: ... watch'
-      , '   Disable folder watching: .. unwatch'
-      , '   Server status: ............ status|stat'
-      , '   Destroy a server: ......... destroy|kill'
-      , '   Killing polla_master: ..... exit|die'
-      , ''
-      , 'IMPORTANT NOTES: Your app should be in its own folder for code reloading to work '
-        + 'properly.'
-      , 'Also, process.env.POLLA_PORT and process.env.POLLA_HOSTNAME are the two '
-        + 'enviroment variables passed to your app\'s instance, so your http server should be '
-        + 'listening to them for polla to be able to route the traffic.'
-      , '-----------------------------------------------------------'
+      , 'Usage:  polla <hostname> [--]<command> [parameters] [<command>, ...]'
+      , 'Commands:  init <folder>, start, stop, restart, destroy, exit'
       ].join('\n')
     )
     
