@@ -327,7 +327,9 @@ Server.prototype = {
           self.changed = true
           self.started = false
           self.retries = 0
-          self.trySpawn()
+          setTimeout(function() {
+            self.trySpawn()
+          }, 10 * 1000)
         }
       })
       
